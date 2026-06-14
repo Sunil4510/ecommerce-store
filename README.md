@@ -21,7 +21,13 @@ Clone the repository and install all dependencies:
 npm install
 ```
 
-### 2. Run the Development Server
+### 2. Configure Environment Variables
+Copy the template `.env.example` to `.env` and modify the values as needed (Note: `.env` is git-ignored):
+```bash
+cp .env.example .env
+```
+
+### 3. Run the Development Server
 Starts the local API server on `http://localhost:3000`:
 ```bash
 npm run dev
