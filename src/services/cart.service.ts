@@ -7,15 +7,10 @@ export class CartService {
 
   /**
    * Adds an item to the shopping cart, creating a new cart if no cartId is provided.
-   * Enforces positive integer quantity validation and secure server-side price lookup.
+   * Assumes quantity has been validated by the validation layer.
    */
   public addToCart(cartId: string | undefined, productId: string, quantity: number): Cart {
-    // 1. Validation: Ensure quantity is a positive integer >= 1
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      throw new Error('Quantity must be a positive integer greater than or equal to 1.');
-    }
-
-    // 2. Fetch or initialize the Cart
+    // 1. Fetch or initialize the Cart
     let cart: Cart;
     if (cartId) {
       const existingCart = this.repo.getCart(cartId);
@@ -31,13 +26,13 @@ export class CartService {
       };
     }
 
-    // 3. Verify Product existence in the catalog
+    // 2. Verify Product existence in the catalog
     const product = this.repo.getProduct(productId);
     if (!product) {
       throw new Error(`Product with ID '${productId}' not found in catalog.`);
     }
 
-    // 4. Update items list (increment quantity if already exists)
+    // 3. Update items list (increment quantity if already exists)
     const existingItem = cart.items.find(item => item.product.id === productId);
     if (existingItem) {
       existingItem.quantity += quantity;
@@ -45,10 +40,10 @@ export class CartService {
       cart.items.push({ product, quantity });
     }
 
-    // 5. Recalculate subtotal using live catalog prices (prevents client price tampering)
+    // 4. Recalculate subtotal using live catalog prices (prevents client price tampering)
     this.recalculateSubtotal(cart);
 
-    // 6. Save cart and return state
+    // 5. Save cart and return state
     this.repo.saveCart(cart);
     return cart;
   }

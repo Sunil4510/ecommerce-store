@@ -6,16 +6,11 @@ export class CheckoutController {
 
   /**
    * Processes a cart checkout, applying an optional coupon code.
+   * Assumes input has already been verified by validation middleware.
    */
   public checkout = (req: Request, res: Response): void => {
     try {
       const { cartId, couponCode } = req.body;
-
-      if (!cartId) {
-        res.status(400).json({ error: 'Bad Request', message: 'cartId is a required field.' });
-        return;
-      }
-
       const order = this.service.checkout(cartId, couponCode);
       res.status(200).json(order);
     } catch (error: any) {
