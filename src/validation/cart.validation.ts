@@ -1,7 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 
-const addToCartSchema = z.object({
+export const addToCartSchema = z.object({
   productId: z
     .string({
       message: "Field 'productId' is required and must be a string.",
@@ -20,22 +19,4 @@ const addToCartSchema = z.object({
     .min(1, "Field 'cartId' cannot be empty.")
     .optional(),
 });
-
-/**
- * Zod-based request validation middleware for cart addition.
- */
-export function validateAddToCart(req: Request, res: Response, next: NextFunction): void {
-  const result = addToCartSchema.safeParse(req.body);
-
-  if (!result.success) {
-    res.status(400).json({
-      error: 'Validation Error',
-      messages: result.error.issues.map(issue => issue.message),
-    });
-    return;
-  }
-
-  // Assign the safely parsed and typed data back to req.body
-  req.body = result.data;
-  next();
-}
+export type AddToCartInput = z.infer<typeof addToCartSchema>;
