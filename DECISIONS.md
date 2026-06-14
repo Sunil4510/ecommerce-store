@@ -1,92 +1,129 @@
 # Design Decisions
 
-This document details the architectural and implementation design decisions made while developing the E-Commerce Store APIs.
+This document details 9 key design decisions made during the development of the E-Commerce Store APIs.
 
 ---
 
-## Decision: Layered Architecture Pattern
+## Decision: Repository Pattern
 
-**Context:** Organizing the codebase structure to promote readability, testability, and future scalability.
+**Context:** Decoupling storage logic from business logic.
 
 **Options Considered:**
-- **Option A (Monolithic Controllers):** Controllers handle HTTP routing, request parsing, request body validation, business logic calculations, and database calls in a single monolithic controller handler.
-- **Option B (Layered Architecture):** Decouple the codebase into modular layers: Routes $\rightarrow$ Request Validation $\rightarrow$ Controllers $\rightarrow$ Services $\rightarrow$ Data Repository.
+- **Option A:** Manipulate in-memory Maps and Arrays directly inside services.
+- **Option B:** Wrap storage access inside a dedicated repository class.
 
-**Choice:** Option B (Layered Architecture).
+**Choice:** Option B.
 
-**Why:** Decoupling separation of concerns is a standard enterprise engineering practice:
-* **Routes** only deal with URL endpoints mounting and middleware execution order.
-* **Request Validation** filters out bad inputs immediately before executing code.
-* **Controllers** deal strictly with HTTP status codes, request parsing, and error formatting.
-* **Services** contain pure business logic (independent of Express, HTTP headers, etc.), making them incredibly easy to unit test.
-* **Repositories** focus strictly on data storage, queries, and mutations.
+**Why:** Keeps business logic database-agnostic. Swapping from in-memory to a real database (like PostgreSQL) only requires modifying the repository file.
 
 ---
 
-## Decision: Generic Schema Validation Middleware using Zod
+## Decision: Layered Architecture
 
-**Context:** Preventing malformed JSON payloads, negative bounds (e.g. quantity -5), and type injection attacks before it reaches core business layers.
+**Context:** Organizing code structure for maintainability and readability.
 
 **Options Considered:**
-- **Option A (Inline Handler Validation):** Validate requests manually in each controller using standard `if/else` checks.
-- **Option B (Generic Zod Validation Middleware):** Create a single reusable validation middleware `validate(schema)` that parses the request body against a schema and sanitizes the inputs.
+- **Option A:** Monolithic controller routes handling validation, logic, and database operations.
+- **Option B:** Separated layers: Routes $\rightarrow$ Validation $\rightarrow$ Controllers $\rightarrow$ Services $\rightarrow$ Repository.
 
-**Choice:** Option B (Generic Zod Validation Middleware).
+**Choice:** Option B.
 
-**Why:** Using a reusable middleware decouples validation from controllers. Since Zod v4 automatically strips out untracked properties (`safeParse`), it prevents parameters injection (e.g., users attempting to inject pricing values). It isolates validation failures, keeping controllers and services completely clean.
+**Why:** Enforces strict separation of concerns. Each layer has a single responsibility, which increases testability.
 
 ---
 
-## Decision: Suffix Randomization on Milestone Coupons
+## Decision: Coupon Expiration
 
-**Context:** Protecting the store from brute-forcing or guessing valid generated coupons.
+**Context:** Restricting the validity window of generated milestone discount codes.
 
 **Options Considered:**
-- **Option A (Sequential Codes):** Generate predictable codes like `DISCOUNT-ORD5`, `DISCOUNT-ORD10`.
-- **Option B (Cryptographically Randomized Suffixes):** Append a high-entropy random hex suffix to the coupon (e.g., `DISCOUNT-ORD5-A4F8K9`).
+- **Option A:** Coupons remain valid indefinitely until they are used.
+- **Option B:** Coupons expire exactly 7 days after they are generated.
 
-**Choice:** Option B (Cryptographically Randomized Suffixes).
+**Choice:** Option B.
 
-**Why:** Predictable codes enable enumeration attacks. An attacker could query the server iteratively to find valid discount codes and apply them before the intended recipients do. Appending a random 6-character hex suffix makes brute-forcing computationally infeasible.
+**Why:** Prevents the store from accumulating long-term unused discount liabilities, while encouraging immediate customer checkouts.
 
 ---
 
-## Decision: Milestone-Based Coupon Expiration Rule (7 Days)
+## Decision: Coupon Suffix Randomization
 
-**Context:** Defining coupon validity limits to prevent long-term liabilities and emulate real-world business environments.
+**Context:** Preventing brute-force guessing of active coupon codes.
 
 **Options Considered:**
-- **Option A (Indefinite Expiration):** Milestone coupons remain valid forever until consumed.
-- **Option B (Time-Bound Expiration):** Coupons automatically expire exactly 7 days after generation.
+- **Option A:** Predictable sequential codes (e.g. `DISCOUNT-ORD5`, `DISCOUNT-ORD10`).
+- **Option B:** Appending a cryptographically secure random suffix (e.g. `DISCOUNT-ORD5-8F3Z9K`).
 
-**Choice:** Option B (Time-Bound Expiration).
+**Choice:** Option B.
 
-**Why:** Setting a 7-day expiration (Jersey number 7, aka Thala for a reason!) mirrors professional loyalty reward designs, preventing the accumulation of unused discount liabilities on the store. It requires checking timestamps (`expiresAt.getTime() < Date.now()`) during checkout to assert validity.
+**Why:** Predictable codes enable enumeration attacks. Random suffixes make brute-forcing mathematically impossible.
 
 ---
 
-## Decision: Statistics Counter Definitions for "Items Purchased"
+## Decision: Thread Safety & Concurrency
 
-**Context:** Designing the e-commerce analytics aggregates for tracking sales volume.
+**Context:** Preventing double-spending of single-use coupons during concurrent checkout requests.
 
 **Options Considered:**
-- **Option A (Unique Products Count):** Count unique product categories sold (e.g., buying 3 Laptops counts as 1 item purchased).
-- **Option B (Total Product Units Count):** Count total physical product units sold (e.g., buying 3 Laptops counts as 3 items purchased).
+- **Option A:** Rely on synchronous operations in Node.js's single-threaded event loop (for in-memory).
+- **Option B:** Implement database-level row locks or unique index constraints.
 
-**Choice:** Option B (Total Product Units Count).
+**Choice:** Option A (for our in-memory store), with Option B planned for a real database.
 
-**Why:** In inventory management and standard retail analytics (like Shopify or Flipkart), sales volume is calculated by summing the total number of physical items sold (`quantity`). We aggregate statistics by summing up the quantities of all line items inside completed orders.
+**Why:** Single-threaded synchronous updates are naturally atomic in-memory. Switching to a real database will require Row Locks (`FOR UPDATE` in SQL) to prevent race conditions.
 
 ---
 
-## Decision: Singleton Repository Pattern
+## Decision: Sales Volume Items Count Logic
 
-**Context:** Ensuring database state consistency across the multi-layered architecture within a single process.
+**Context:** Defining how "count of items purchased" is calculated in stats.
 
 **Options Considered:**
-- **Option A (New Class Instantiations):** Create new repository instances in each service file as needed.
-- **Option B (Singleton Pattern):** Implement a static `getInstance()` constructor that guarantees a single repository instance is shared globally.
+- **Option A:** Count unique product types (e.g., Laptop and Mouse = 2 items).
+- **Option B:** Count total units sold (e.g., 2 Laptops and 1 Mouse = 3 items).
 
-**Choice:** Option B (Singleton Pattern).
+**Choice:** Option B.
 
-**Why:** Since we are using an in-memory database, instantiating new repository objects would create isolated maps, causing data conflicts where the Cart Service edits a cart that the Checkout Service cannot see. The Singleton pattern ensures there is a single, unified database state in memory.
+**Why:** Summing line item quantities represents true sales volume and matches industry standards.
+
+---
+
+## Decision: Admin Authentication Middleware
+
+**Context:** Securing administrative statistical data and coupon endpoints.
+
+**Options Considered:**
+- **Option A:** Leave administrative API endpoints public.
+- **Option B:** Implement lightweight header token validation middleware (`x-admin-token`).
+
+**Choice:** Option B.
+
+**Why:** Exposing revenue figures and coupon creation poses a security risk. A simple configuration header secures routes without full auth complexity.
+
+---
+
+## Decision: Pricing and Input Integrity
+
+**Context:** Preventing clients from injecting custom prices or negative quantities.
+
+**Options Considered:**
+- **Option A:** Trust price and quantity details sent in the client request payload.
+- **Option B:** Reject negative quantities in validation and query product prices strictly from the server catalog.
+
+**Choice:** Option B.
+
+**Why:** Restricts price-manipulation exploits. The server remains the absolute source of truth for pricing.
+
+---
+
+## Decision: Proactive Dashboard Indicators in Admin Stats API
+
+**Context:** Exposing coupon eligibility feedback to the administrator dashboard.
+
+**Options Considered:**
+- **Option A:** Expose only raw checkout count, requiring manual client calculation.
+- **Option B:** Expose helper fields (`isCouponGenerationEligible`, `eligibleCouponsCount`, `ordersNeededForNextCoupon`).
+
+**Choice:** Option B.
+
+**Why:** Allows dashboards to easily toggle generate buttons and render milestone progress bars dynamically.
