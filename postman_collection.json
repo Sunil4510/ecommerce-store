@@ -1,0 +1,255 @@
+{
+	"info": {
+		"_postman_id": "8b7e9c5f-1234-abcd-ef01-23456789abc0",
+		"name": "E-Commerce Store API",
+		"description": "Postman collection for testing the layered E-Commerce Store REST APIs (Products, Cart, Checkout, and Admin endpoints).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get Catalog Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"products"
+							]
+						},
+						"description": "Retrieve the list of pre-seeded product items from the server-side catalog."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cart",
+			"item": [
+				{
+					"name": "Add to Cart (Create New)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": \"prod_1\",\n    \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/add",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart",
+								"add"
+							]
+						},
+						"description": "Adds a product item with quantity to a cart. Omit cartId to generate a new cart."
+					},
+					"response": []
+				},
+				{
+					"name": "Add to Cart (Existing)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cartId\": \"{{cart_id}}\",\n    \"productId\": \"prod_2\",\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/add",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart",
+								"add"
+							]
+						},
+						"description": "Adds an item to an existing cart using cartId."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Checkout",
+			"item": [
+				{
+					"name": "Checkout Cart (Full Price)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cartId\": \"{{cart_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/checkout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"checkout"
+							]
+						},
+						"description": "Places an order at full price for the items inside the cart."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout Cart (With Coupon)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cartId\": \"{{cart_id}}\",\n    \"couponCode\": \"{{coupon_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/checkout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"checkout"
+							]
+						},
+						"description": "Places an order applying a discount code. Validates existence, double-spending, and expiration."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-admin-token",
+								"value": "{{admin_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"stats"
+							]
+						},
+						"description": "Retrieve administrative statistics including items sold, revenue, and coupon eligibility metadata."
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Coupon",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-admin-token",
+								"value": "{{admin_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/discount/generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"discount",
+								"generate"
+							]
+						},
+						"description": "Mints a new coupon code if the N-th order milestone has been satisfied."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "super-secret-admin-token",
+			"type": "string"
+		},
+		{
+			"key": "cart_id",
+			"value": "replace-with-cart-id",
+			"type": "string"
+		},
+		{
+			"key": "coupon_code",
+			"value": "replace-with-coupon-code",
+			"type": "string"
+		}
+	]
+}

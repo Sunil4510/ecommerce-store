@@ -48,6 +48,16 @@ npm run test
 
 ---
 
+## 📬 Postman Collection
+A pre-configured Postman Collection is included in the project root:
+* **File**: `postman_collection.json`
+* **How to use**:
+  1. Open Postman.
+  2. Click **Import** and select the `postman_collection.json` file.
+  3. The collection is configured with default environment variables (`base_url`, `admin_token`, `cart_id`, `coupon_code`) for testing.
+
+---
+
 ## 🔒 Security Middleware (Admin Auth)
 All `/api/admin/*` endpoints are secured by an authorization middleware:
 * You must include the header: `x-admin-token: super-secret-admin-token`
